@@ -1,0 +1,11 @@
+/* src/index.css */
+/* BRANCH: feat/project-scaffold (Christian P. Adlawan — M1) */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html, body, #root {
+    height: 100%;
+  }
+}
