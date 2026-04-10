@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">
+  <rect width="32" height="32" rx="8" fill="url(#fg)"/>
+  <defs>
+    <linearGradient id="fg" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#1e40af"/>
+      <stop offset="100%" stop-color="#3b82f6"/>
+    </linearGradient>
+  </defs>
+  <!-- Shield shape -->
+  <path d="M16 5L7 8.5V16c0 4.5 3.8 8.3 9 9.5 5.2-1.2 9-5 9-9.5V8.5L16 5z" fill="white" fill-opacity="0.15"/>
+  <path d="M16 5L7 8.5V16c0 4.5 3.8 8.3 9 9.5 5.2-1.2 9-5 9-9.5V8.5L16 5z" stroke="white" stroke-opacity="0.4" stroke-width="0.8" fill="none"/>
+  <!-- HC monogram -->
+  <text x="16" y="20" font-family="system-ui, sans-serif" font-size="9" font-weight="800" fill="white" text-anchor="middle" letter-spacing="-0.5">HC</text>
+</svg>

@@ -1,11 +1,86 @@
-/* src/index.css */
-/* BRANCH: feat/project-scaffold (Christian P. Adlawan — M1) */
+/* feat/project-scaffold — M1: Christian Adlawan */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
-  html, body, #root {
-    height: 100%;
+  *, *::before, *::after { box-sizing: border-box; }
+
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-slate-50 text-slate-900 font-sans;
+    min-height: 100vh;
+  }
+
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-brand-500;
   }
 }
+
+@layer components {
+  /* Scrollbar */
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: theme('colors.slate.300') transparent;
+  }
+  .scrollbar-thin::-webkit-scrollbar { width: 6px; height: 6px; }
+  .scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    @apply bg-slate-300 rounded-full;
+  }
+
+  /* Card */
+  .card {
+    @apply bg-white rounded-2xl border border-slate-100 shadow-sm;
+  }
+
+  /* Button variants */
+  .btn-primary {
+    @apply inline-flex items-center gap-2 px-4 py-2 bg-brand-600 hover:bg-brand-700
+           text-white text-sm font-medium rounded-xl transition-colors duration-150
+           disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  .btn-secondary {
+    @apply inline-flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200
+           text-slate-700 text-sm font-medium rounded-xl transition-colors duration-150
+           disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  .btn-danger {
+    @apply inline-flex items-center gap-2 px-4 py-2 bg-red-50 hover:bg-red-100
+           text-red-600 text-sm font-medium rounded-xl transition-colors duration-150
+           disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  .btn-ghost {
+    @apply inline-flex items-center gap-2 px-3 py-1.5 text-slate-500 hover:text-slate-900
+           hover:bg-slate-100 text-sm font-medium rounded-lg transition-colors duration-150;
+  }
+
+  /* Input */
+  .input {
+    @apply w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-sm
+           text-slate-900 placeholder-slate-400 transition-colors duration-150
+           focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent
+           disabled:bg-slate-50 disabled:cursor-not-allowed;
+  }
+  .input-error {
+    @apply border-red-300 focus:ring-red-400;
+  }
+
+  /* Badge */
+  .badge {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+  }
+  .badge-blue   { @apply badge bg-brand-50 text-brand-700; }
+  .badge-green  { @apply badge bg-emerald-50 text-emerald-700; }
+  .badge-amber  { @apply badge bg-amber-50 text-amber-700; }
+  .badge-slate  { @apply badge bg-slate-100 text-slate-600; }
+  .badge-red    { @apply badge bg-red-50 text-red-600; }
+}
+
+/* Bar fill — dynamic runtime width (Tailwind can't generate this at build time) */
+.bar-fill { width: var(--bar-w, 0%); }
