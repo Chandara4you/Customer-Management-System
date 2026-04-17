@@ -1,136 +1,117 @@
-// src/context/AuthContext.jsx
-// BRANCH: feat/auth-context (Wayne Andy Y. Villamor — M4)
-import { createContext, useContext, useEffect, useState, useCallback } from 'react';
-import { supabase } from '../config/supabaseClient.js';
-import { RECORD_STATUSES } from '../utils/constants.js';
+// feat/auth-context — M4: Wayne Andy Villamor
+import { createContext, useContext, useEffect, useState } from 'react';
+import { supabase } from '../lib/supabase';
 
 const AuthContext = createContext(null);
 
-const INACTIVE_ACCOUNT_MESSAGE =
-  'Your account is inactive. Please contact an administrator.';
-
-async function fetchUserProfile(userId) {
-  try {
-    const { data, error } = await supabase
-      .from('user')
-      .select('id, email, first_name, last_name, username, user_type, record_status')
-      .eq('id', userId)
-      .maybeSingle();
-
-    if (error) {
-      console.error('fetchUserProfile:', error.message);
-      return { profile: null, error: 'Unable to load your profile.' };
-    }
-    if (!data) {
-      return { profile: null, error: 'Your profile could not be found.' };
-    }
-    return { profile: data, error: null };
-  } catch (err) {
-    console.error('fetchUserProfile:', err);
-    return { profile: null, error: 'Unexpected error while loading profile.' };
+/**
+ * Reads the public.user row for a given auth UID.
+ * Returns null if not found (provision trigger may not have fired yet).
+ */
+async function fetchProfile(userId) {
+  const { data, error } = await supabase
+    .from('user')
+    .select('id, user_type, record_status')
+    .eq('id', userId)
+    .single();
+  if (error) {
+    console.error('fetchProfile:', error);
+    return null;
   }
+  return data;
 }
 
 export function AuthProvider({ children }) {
-  const [session, setSession] = useState(null);
   const [currentUser, setCurrentUser] = useState(null);
-  const [userProfile, setUserProfile] = useState(null);
-  const [authLoading, setAuthLoading] = useState(true);
-  const [authError, setAuthError] = useState(null);
+  const [profile, setProfile]         = useState(null); // public.user row
+  const [loading, setLoading]         = useState(true);
+  const [authError, setAuthError]     = useState(null);
 
-  const clearAuthState = useCallback(() => {
-    setSession(null);
-    setCurrentUser(null);
-    setUserProfile(null);
-  }, []);
+  // Login guard: block INACTIVE users
+  async function applyLoginGuard(session) {
+    if (!session?.user) {
+      setCurrentUser(null);
+      setProfile(null);
+      setLoading(false);
+      return;
+    }
 
-  const runLoginGuard = useCallback(
-    async (activeSession) => {
-      if (!activeSession?.user) {
-        clearAuthState();
-        return;
-      }
-      const { profile, error: profileError } = await fetchUserProfile(activeSession.user.id);
+    const prof = await fetchProfile(session.user.id);
 
-      if (profileError || !profile) {
-        await supabase.auth.signOut();
-        clearAuthState();
-        setAuthError(profileError ?? 'Unable to verify your account.');
-        return;
-      }
+    if (prof?.record_status === 'INACTIVE') {
+      await supabase.auth.signOut();
+      setCurrentUser(null);
+      setProfile(null);
+      setAuthError('Your account is inactive. Contact the administrator.');
+      setLoading(false);
+      return;
+    }
 
-      if (profile.record_status !== RECORD_STATUSES.ACTIVE) {
-        await supabase.auth.signOut();
-        clearAuthState();
-        setAuthError(INACTIVE_ACCOUNT_MESSAGE);
-        return;
-      }
-
-      setSession(activeSession);
-      setCurrentUser(activeSession.user);
-      setUserProfile(profile);
-      setAuthError(null);
-    },
-    [clearAuthState]
-  );
+    setCurrentUser(session.user);
+    setProfile(prof);
+    setAuthError(null);
+    setLoading(false);
+  }
 
   useEffect(() => {
-    let mounted = true;
-
-    (async () => {
-      const { data, error } = await supabase.auth.getSession();
-      if (!mounted) return;
-      if (error) {
-        console.error('AuthContext.getSession:', error.message);
-        setAuthLoading(false);
-        return;
-      }
-      if (data?.session) {
-        await runLoginGuard(data.session);
-      }
-      if (mounted) setAuthLoading(false);
-    })();
-
-    const { data: listener } = supabase.auth.onAuthStateChange(async (event, nextSession) => {
-      if (!mounted) return;
-      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-        await runLoginGuard(nextSession);
-      } else if (event === 'SIGNED_OUT') {
-        clearAuthState();
-      }
+    // Bootstrap: check existing session on mount
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      applyLoginGuard(session);
     });
 
-    return () => {
-      mounted = false;
-      listener?.subscription?.unsubscribe();
-    };
-  }, [runLoginGuard, clearAuthState]);
+    // Subscribe to auth state changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        applyLoginGuard(session);
+      }
+    );
 
-  const signOut = useCallback(async () => {
+    return () => subscription.unsubscribe();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function signUpWithEmail(email, password) {
+    const { data, error } = await supabase.auth.signUp({ email, password });
+    return { data, error };
+  }
+
+  async function signInWithEmail(email, password) {
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    return { data, error };
+  }
+
+  async function signInWithGoogle() {
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: `${window.location.origin}/auth/callback` },
+    });
+    return { data, error };
+  }
+
+  async function signOut() {
     await supabase.auth.signOut();
-    clearAuthState();
-    setAuthError(null);
-  }, [clearAuthState]);
+  }
 
-  const clearAuthError = useCallback(() => setAuthError(null), []);
-
-  const value = {
-    session,
-    currentUser,
-    userProfile,
-    authLoading,
-    authError,
-    signOut,
-    clearAuthError,
-  };
-
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={{
+      currentUser,
+      profile,
+      role: profile?.user_type ?? null,
+      loading,
+      authError,
+      setAuthError,
+      signUpWithEmail,
+      signInWithEmail,
+      signInWithGoogle,
+      signOut,
+    }}>
+      {children}
+    </AuthContext.Provider>
+  );
 }
 
+/** Use inside any component that needs auth state. */
 export function useAuth() {
   const ctx = useContext(AuthContext);
-  if (!ctx) {
-    throw new Error('useAuth must be used within an AuthProvider.');
-  }
+  if (!ctx) throw new Error('useAuth must be used within <AuthProvider>');
   return ctx;
 }
