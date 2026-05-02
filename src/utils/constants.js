@@ -26,8 +26,10 @@ export const ROUTES = {
   LOGIN:          '/login',
   REGISTER:       '/register',
   AUTH_CALLBACK:  '/auth/callback',
+  DASHBOARD:      '/',
   CUSTOMERS:      '/customers',
   CUSTOMER_DETAIL: (id) => `/customers/${id}`,
+  PRODUCTS:       '/products',
   REPORTS:        '/reports',
   ADMIN:          '/admin',
   DELETED:        '/deleted-items',
@@ -35,7 +37,9 @@ export const ROUTES = {
 
 // Nav items per role — used in Sidebar
 export const NAV_ITEMS = [
+  { label: 'Dashboard',     path: ROUTES.DASHBOARD,  icon: 'Home',        roles: [ROLES.USER, ROLES.ADMIN, ROLES.SUPERADMIN] },
   { label: 'Customers',     path: ROUTES.CUSTOMERS,  icon: 'Users',       roles: [ROLES.USER, ROLES.ADMIN, ROLES.SUPERADMIN] },
+  { label: 'Products',      path: ROUTES.PRODUCTS,   icon: 'Package',     roles: [ROLES.USER, ROLES.ADMIN, ROLES.SUPERADMIN] },
   { label: 'Reports',       path: ROUTES.REPORTS,    icon: 'BarChart2',   roles: [ROLES.USER, ROLES.ADMIN, ROLES.SUPERADMIN] },
   { label: 'Deleted Items', path: ROUTES.DELETED,    icon: 'Trash2',      roles: [ROLES.ADMIN, ROLES.SUPERADMIN] },
   { label: 'Admin Panel',   path: ROUTES.ADMIN,      icon: 'ShieldCheck', roles: [ROLES.SUPERADMIN] },
