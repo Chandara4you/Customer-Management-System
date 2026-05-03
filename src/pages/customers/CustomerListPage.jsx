@@ -1,8 +1,12 @@
-// feat/ui-customer-list — M2: Jomar Auditor
+// feat/ui-customer-list — M2: Jomar Auditor (Sprint 2 Enhanced)
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCustomers } from '../../hooks/useCustomers';
+import { useRights } from '../../context/UserRightsContext';
 import { ROUTES, PAGE_SIZE, PAY_TERM_LABELS } from '../../utils/constants';
+import AddCustomerModal from '../../components/modals/AddCustomerModal';
+import EditCustomerModal from '../../components/modals/EditCustomerModal';
+import SoftDeleteConfirmDialog from '../../components/modals/SoftDeleteConfirmDialog';
 
 // ── Pay-term badge ─────────────────────────────────────────────────────────────
 function PaytermBadge({ term }) {
@@ -59,9 +63,18 @@ function EmptyState({ query, onClear }) {
 // ── Main page ─────────────────────────────────────────────────────────────────
 export default function CustomerListPage() {
   const { customers, loading, error, search, refresh, query } = useCustomers();
+  const { rights, userType } = useRights();
   const navigate = useNavigate();
   const [page, setPage]     = useState(1);
   const [localQ, setLocalQ] = useState('');
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [editingCustomer, setEditingCustomer] = useState(null);
+  const [deletingCustomer, setDeletingCustomer] = useState(null);
+
+  const canAdd = rights.CUST_ADD === true;
+  const canEdit = rights.CUST_EDIT === true;
+  const canDelete = rights.CUST_DEL === true;
+  const showStamp = userType === 'ADMIN' || userType === 'SUPERADMIN';
 
   // Client-side pagination
   const total      = customers.length;
@@ -111,27 +124,15 @@ export default function CustomerListPage() {
             Refresh
           </button>
 
-          {/* Add Customer — disabled Sprint 1 */}
-          <div className="relative group">
-            <button
-              disabled
-              className="btn-primary opacity-50 cursor-not-allowed"
-              aria-describedby="add-tooltip"
-            >
+          {/* Add Customer — rights gated */}
+          {canAdd && (
+            <button onClick={() => setShowAddModal(true)} className="btn-primary">
               <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
               </svg>
               Add Customer
             </button>
-            <div
-              id="add-tooltip"
-              role="tooltip"
-              className="absolute right-0 top-full mt-2 w-44 px-3 py-2 bg-slate-800 text-white text-xs
-                         rounded-lg opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-10"
-            >
-              Coming in Sprint 2
-            </div>
-          </div>
+          )}
         </div>
       </div>
 
@@ -180,6 +181,9 @@ export default function CustomerListPage() {
                 <th className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Name</th>
                 <th className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider hidden md:table-cell">Address</th>
                 <th className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Pay Term</th>
+                {showStamp && (
+                  <th className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider hidden lg:table-cell">Stamp</th>
+                )}
                 <th className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider text-right">Actions</th>
               </tr>
             </thead>
@@ -219,16 +223,36 @@ export default function CustomerListPage() {
                         <td className="px-4 py-3.5">
                           <PaytermBadge term={c.payterm} />
                         </td>
+                        {showStamp && (
+                          <td className="px-4 py-3.5 text-xs text-slate-400 font-mono hidden lg:table-cell max-w-[200px] truncate">
+                            {c.stamp || '—'}
+                          </td>
+                        )}
                         <td className="px-4 py-3.5 text-right">
-                          <button
-                            onClick={e => { e.stopPropagation(); navigate(ROUTES.CUSTOMER_DETAIL(c.custno)); }}
-                            className="btn-ghost text-brand-600 opacity-0 group-hover:opacity-100 transition-opacity"
-                          >
-                            View
-                            <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                            </svg>
-                          </button>
+                          <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button
+                              onClick={e => { e.stopPropagation(); navigate(ROUTES.CUSTOMER_DETAIL(c.custno)); }}
+                              className="btn-ghost text-brand-600"
+                            >
+                              View
+                            </button>
+                            {canEdit && (
+                              <button
+                                onClick={e => { e.stopPropagation(); setEditingCustomer(c); }}
+                                className="btn-ghost text-blue-600"
+                              >
+                                Edit
+                              </button>
+                            )}
+                            {canDelete && (
+                              <button
+                                onClick={e => { e.stopPropagation(); setDeletingCustomer(c); }}
+                                className="btn-ghost text-red-600"
+                              >
+                                Delete
+                              </button>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     ))
@@ -295,6 +319,28 @@ export default function CustomerListPage() {
           </div>
         )}
       </div>
+
+      {/* Modals */}
+      {showAddModal && (
+        <AddCustomerModal
+          onClose={() => setShowAddModal(false)}
+          onSuccess={() => { setShowAddModal(false); refresh(); }}
+        />
+      )}
+      {editingCustomer && (
+        <EditCustomerModal
+          customer={editingCustomer}
+          onClose={() => setEditingCustomer(null)}
+          onSuccess={() => { setEditingCustomer(null); refresh(); }}
+        />
+      )}
+      {deletingCustomer && (
+        <SoftDeleteConfirmDialog
+          customer={deletingCustomer}
+          onClose={() => setDeletingCustomer(null)}
+          onSuccess={() => { setDeletingCustomer(null); refresh(); }}
+        />
+      )}
     </div>
   );
 }
